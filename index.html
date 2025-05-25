@@ -84,7 +84,9 @@
         }
 
         function selectProduct(productName) {
-            window.location.href = `cart.html?product=${encodeURIComponent(productName)}`;
+            // Encode the product name to handle spaces and special characters
+            const encodedName = encodeURIComponent(productName.trim());
+            window.location.href = `cart.html?product=${encodedName}`;
         }
 
         function renderProducts(products) {
@@ -92,7 +94,8 @@
             products.forEach(product => {
                 const div = document.createElement('div');
                 div.className = 'product';
-                div.onclick = () => selectProduct(product.name);
+                // Use a closure to prevent string interpolation issues
+                div.onclick = function() { selectProduct(product.name); };
                 div.innerHTML = `
                     <img src="${product.image}" alt="${product.name}">
                     <h3>${product.name}</h3>
