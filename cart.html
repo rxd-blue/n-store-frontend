@@ -76,6 +76,15 @@
             padding: 20px;
             color: #666;
         }
+        .debug-info {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            direction: ltr;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -83,15 +92,30 @@
         <h1>سلة المشتريات</h1>
         <div id="error-message"></div>
         <div id="loading" class="loading">جاري تحميل المنتج...</div>
+        <div id="debug" class="debug-info"></div>
         <div id="cart-content"></div>
         <a href="index.html" class="back-btn">العودة للمتجر</a>
     </div>
 
     <script>
+        const API_URL = 'https://wry-boundless-violin.glitch.me';
         const urlParams = new URLSearchParams(window.location.search);
         const productName = urlParams.get('product');
+        const debugElement = document.getElementById('debug');
+        
+        // Enable debug mode
+        const DEBUG = true;
+
+        function log(message, data) {
+            if (DEBUG) {
+                console.log(message, data);
+                debugElement.style.display = 'block';
+                debugElement.innerHTML += `<div>${message}: ${JSON.stringify(data)}</div>`;
+            }
+        }
         
         function showError(message) {
+            log('Error Shown', { message });
             const errorElement = document.getElementById('error-message');
             errorElement.style.display = 'block';
             errorElement.textContent = message;
@@ -99,6 +123,7 @@
         }
 
         function showProduct(product) {
+            log('Showing Product', product);
             document.getElementById('loading').style.display = 'none';
             document.getElementById('cart-content').innerHTML = `
                 <div class="cart-item">
@@ -114,6 +139,8 @@
         }
 
         async function loadCart() {
+            log('Loading Cart', { productName });
+            
             if (!productName) {
                 showError('لم يتم تحديد منتج');
                 return;
@@ -121,27 +148,41 @@
 
             try {
                 const decodedProductName = decodeURIComponent(productName);
-                const response = await fetch('https://wry-boundless-violin.glitch.me/api/cart', {
+                log('Decoded Product Name', { original: productName, decoded: decodedProductName });
+                
+                const requestData = { productName: decodedProductName };
+                log('Cart Request', requestData);
+
+                const response = await fetch(`${API_URL}/api/cart`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ productName: decodedProductName })
+                    body: JSON.stringify(requestData)
+                });
+
+                log('Cart Response Status', { 
+                    ok: response.ok, 
+                    status: response.status,
+                    statusText: response.statusText
                 });
 
                 if (!response.ok) {
-                    throw new Error('فشل في تحميل المنتج');
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const data = await response.json();
+                log('Cart Response Data', data);
                 
                 if (data.success && data.product) {
                     showProduct(data.product);
                 } else {
-                    showError('المنتج غير موجود');
+                    showError(data.message || 'المنتج غير موجود');
                 }
             } catch (error) {
                 console.error('Error:', error);
+                log('Cart Error', { message: error.message, stack: error.stack });
                 showError('حدث خطأ أثناء تحميل المنتج');
             }
         }
