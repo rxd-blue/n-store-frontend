@@ -92,6 +92,8 @@
             font-family: monospace;
             direction: ltr;
             display: none;
+            max-height: 200px;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -136,7 +138,15 @@
             if (DEBUG) {
                 console.log(message, data);
                 debugElement.style.display = 'block';
-                debugElement.innerHTML += `<div>${message}: ${JSON.stringify(data)}</div>`;
+                const logEntry = document.createElement('div');
+                logEntry.textContent = `${message}: ${JSON.stringify(data)}`;
+                debugElement.insertBefore(logEntry, debugElement.firstChild);
+            }
+        }
+
+        function clearLog() {
+            if (DEBUG) {
+                debugElement.innerHTML = '';
             }
         }
 
@@ -181,6 +191,7 @@
             const category = categoryFilter.value;
             const brand = brandFilter.value;
             
+            clearLog();
             log('Applying Filters', { category, brand });
             updateStatus(false, 'جاري تحميل المنتجات...');
             
@@ -210,12 +221,13 @@
                 const data = await response.json();
                 log('Filter Response Data', data);
 
-                if (data.success) {
-                    allProducts = data.products || [];
+                // Check if data.products exists and is an array
+                if (data && Array.isArray(data.products)) {
+                    allProducts = data.products;
                     renderProducts(allProducts);
                     updateStatus(true);
                 } else {
-                    throw new Error(data.message || 'Failed to filter products');
+                    throw new Error('Invalid response format');
                 }
             } catch (error) {
                 console.error('Error applying filters:', error);
@@ -225,6 +237,7 @@
         }
 
         async function fetchProducts() {
+            clearLog();
             log('Fetching Products', { url: `${API_URL}/api/products` });
             updateStatus(false, 'جاري تحميل المنتجات...');
             
@@ -244,12 +257,13 @@
                 const data = await response.json();
                 log('Products Response Data', data);
 
-                if (data.success) {
-                    allProducts = data.products || [];
+                // Check if data.products exists and is an array
+                if (data && Array.isArray(data.products)) {
+                    allProducts = data.products;
                     renderProducts(allProducts);
                     updateStatus(true);
                 } else {
-                    throw new Error(data.message || 'Failed to fetch products');
+                    throw new Error('Invalid response format');
                 }
             } catch (error) {
                 console.error('Error fetching products:', error);

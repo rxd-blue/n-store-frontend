@@ -84,6 +84,8 @@
             font-family: monospace;
             direction: ltr;
             display: none;
+            max-height: 200px;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -110,7 +112,15 @@
             if (DEBUG) {
                 console.log(message, data);
                 debugElement.style.display = 'block';
-                debugElement.innerHTML += `<div>${message}: ${JSON.stringify(data)}</div>`;
+                const logEntry = document.createElement('div');
+                logEntry.textContent = `${message}: ${JSON.stringify(data)}`;
+                debugElement.insertBefore(logEntry, debugElement.firstChild);
+            }
+        }
+
+        function clearLog() {
+            if (DEBUG) {
+                debugElement.innerHTML = '';
             }
         }
         
@@ -139,6 +149,7 @@
         }
 
         async function loadCart() {
+            clearLog();
             log('Loading Cart', { productName });
             
             if (!productName) {
@@ -175,10 +186,10 @@
                 const data = await response.json();
                 log('Cart Response Data', data);
                 
-                if (data.success && data.product) {
+                if (data && data.product) {
                     showProduct(data.product);
                 } else {
-                    showError(data.message || 'المنتج غير موجود');
+                    showError('المنتج غير موجود');
                 }
             } catch (error) {
                 console.error('Error:', error);
