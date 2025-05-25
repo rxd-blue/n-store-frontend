@@ -20,6 +20,25 @@
             text-align: center;
             margin-bottom: 30px;
         }
+        .filter-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .filter-group {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        .filter-group select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-width: 150px;
+        }
         .products-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -71,12 +90,32 @@
     <div class="container">
         <h1>متجر المنتجات</h1>
         <div id="status"></div>
+        
+        <div class="filter-section">
+            <div class="filter-group">
+                <select id="categoryFilter">
+                    <option value="">كل الفئات</option>
+                    <option value="تليفونات">تليفونات</option>
+                    <option value="غسالات">غسالات</option>
+                </select>
+                <select id="brandFilter">
+                    <option value="">كل الماركات</option>
+                    <option value="سامسونج">سامسونج</option>
+                    <option value="شاومي">شاومي</option>
+                    <option value="ال جي">ال جي</option>
+                </select>
+            </div>
+        </div>
+        
         <div class="products-grid" id="products"></div>
     </div>
 
     <script>
         const statusElement = document.getElementById('status');
         const productsGrid = document.getElementById('products');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const brandFilter = document.getElementById('brandFilter');
+        let allProducts = [];
 
         function updateStatus(connected) {
             statusElement.textContent = connected ? 'متصل بالسيرفر' : 'جاري المحاولة للاتصال بالسيرفر...';
@@ -94,7 +133,6 @@
             products.forEach(product => {
                 const div = document.createElement('div');
                 div.className = 'product';
-                // Use a closure to prevent string interpolation issues
                 div.onclick = function() { selectProduct(product.name); };
                 div.innerHTML = `
                     <img src="${product.image}" alt="${product.name}">
@@ -107,17 +145,51 @@
             });
         }
 
+        async function applyFilters() {
+            const category = categoryFilter.value;
+            const brand = brandFilter.value;
+            
+            try {
+                await fetch('https://wry-boundless-violin.glitch.me/api/filter', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ category, brand })
+                });
+
+                // Filter products locally
+                let filtered = [...allProducts];
+                if (category) {
+                    filtered = filtered.filter(p => p.category === category);
+                }
+                if (brand) {
+                    filtered = filtered.filter(p => p.brand === brand);
+                }
+                renderProducts(filtered);
+                updateStatus(true);
+            } catch (error) {
+                console.error('Error applying filters:', error);
+                updateStatus(false);
+            }
+        }
+
         async function fetchProducts() {
             try {
                 const response = await fetch('https://wry-boundless-violin.glitch.me/api/products');
                 const data = await response.json();
-                renderProducts(data.products);
+                allProducts = data.products;
+                renderProducts(allProducts);
                 updateStatus(true);
             } catch (error) {
                 console.error('Error fetching products:', error);
                 updateStatus(false);
             }
         }
+
+        // Add event listeners for filters
+        categoryFilter.addEventListener('change', applyFilters);
+        brandFilter.addEventListener('change', applyFilters);
 
         // Initial load
         fetchProducts();

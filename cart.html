@@ -71,65 +71,83 @@
             margin-bottom: 20px;
             display: none;
         }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>سلة المشتريات</h1>
         <div id="error-message"></div>
+        <div id="loading" class="loading">جاري تحميل المنتج...</div>
         <div id="cart-content"></div>
         <a href="index.html" class="back-btn">العودة للمتجر</a>
     </div>
 
     <script>
-        // Get product from URL parameters and decode it
         const urlParams = new URLSearchParams(window.location.search);
-        const productName = decodeURIComponent(urlParams.get('product') || '');
+        const productName = urlParams.get('product');
         
+        function showError(message) {
+            const errorElement = document.getElementById('error-message');
+            errorElement.style.display = 'block';
+            errorElement.textContent = message;
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showProduct(product) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('cart-content').innerHTML = `
+                <div class="cart-item">
+                    <img src="${product.image}" alt="${product.name}">
+                    <div class="item-details">
+                        <h2>${product.name}</h2>
+                        <p>${product.brand}</p>
+                        <p>${product.category}</p>
+                        <p class="price">${product.price} جنيه</p>
+                    </div>
+                </div>
+            `;
+        }
+
         async function loadCart() {
             if (!productName) {
-                document.getElementById('error-message').style.display = 'block';
-                document.getElementById('error-message').textContent = 'لم يتم تحديد منتج';
+                showError('لم يتم تحديد منتج');
                 return;
             }
 
             try {
+                const decodedProductName = decodeURIComponent(productName);
                 const response = await fetch('https://wry-boundless-violin.glitch.me/api/cart', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ productName })
+                    body: JSON.stringify({ productName: decodedProductName })
                 });
+
+                if (!response.ok) {
+                    throw new Error('فشل في تحميل المنتج');
+                }
 
                 const data = await response.json();
                 
-                if (data.success) {
-                    const product = data.product;
-                    document.getElementById('cart-content').innerHTML = `
-                        <div class="cart-item">
-                            <img src="${product.image}" alt="${product.name}">
-                            <div class="item-details">
-                                <h2>${product.name}</h2>
-                                <p>${product.brand}</p>
-                                <p>${product.category}</p>
-                                <p class="price">${product.price} جنيه</p>
-                            </div>
-                        </div>
-                    `;
+                if (data.success && data.product) {
+                    showProduct(data.product);
                 } else {
-                    document.getElementById('error-message').style.display = 'block';
-                    document.getElementById('error-message').textContent = 'المنتج غير موجود';
+                    showError('المنتج غير موجود');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                document.getElementById('error-message').style.display = 'block';
-                document.getElementById('error-message').textContent = 'حدث خطأ أثناء تحميل المنتج';
+                showError('حدث خطأ أثناء تحميل المنتج');
             }
         }
 
-        // Load cart if product name is provided
-        loadCart();
+        // Load cart when page loads
+        document.addEventListener('DOMContentLoaded', loadCart);
     </script>
 </body>
 </html> 
